@@ -32,25 +32,66 @@ def classify_sentiment_by_text(text):
     pos = sum(1 for w in POSITIVE_WORDS if w in text)
     neg = sum(1 for w in NEGATIVE_WORDS if w in text)
     return "positive" if pos>neg else ("negative" if neg>pos else "neutral")
-import os
+import os, subprocess, glob
 def get_korean_font_path():
-    # 1. Streamlit Cloud (Linux) 시스템 폰트 경로 (packages.txt가 있을 경우)
-    linux_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
-    if os.path.exists(linux_path):
-        return linux_path
-        
-    # 2. Windows 폰트 경로
+    # 1. Streamlit Cloud (Linux) — 다양한 Nanum 폰트 경로 탐색
+    linux_nanum_patterns = [
+        "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+        "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",
+        "/usr/share/fonts/truetype/nanum/*.ttf",
+        "/usr/share/fonts/opentype/nanum/*.ttf",
+        "/usr/share/fonts/NanumGothic.ttf",
+        "/usr/share/fonts/truetype/NanumGothic.ttf",
+    ]
+    for pattern in linux_nanum_patterns:
+        matches = glob.glob(pattern)
+        if matches:
+            return matches[0]
+
+    # 2. Linux — fc-list로 한글 폰트 찾기
+    try:
+        result = subprocess.run(
+            ["fc-list", ":lang=ko", "file"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            font_path = result.stdout.strip().split("\n")[0].split(":")[0].strip()
+            if os.path.exists(font_path):
+                return font_path
+    except Exception:
+        pass
+
+    # 3. Linux — find로 Nanum 폰트 검색
+    try:
+        result = subprocess.run(
+            ["find", "/usr/share/fonts", "-name", "Nanum*", "-type", "f"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            font_path = result.stdout.strip().split("\n")[0].strip()
+            if os.path.exists(font_path):
+                return font_path
+    except Exception:
+        pass
+
+    # 4. Windows 폰트 경로
     for p in ["C:/Windows/Fonts/malgun.ttf", "C:/Windows/Fonts/gulim.ttc"]:
         if os.path.exists(p): 
             return p
             
-    # 3. font_manager로 설치된 폰트 탐색
+    # 5. font_manager로 설치된 폰트 탐색
     for f in fm.fontManager.ttflist:
-        if any(k in f.name.lower() for k in ["malgun", "gulim", "nanum"]): 
+        if any(k in f.name.lower() for k in ["malgun", "gulim", "nanum", "gothic"]): 
             return f.fname
             
     return ""
+
+# matplotlib 폰트 캐시 재빌드 (Streamlit Cloud에서 필요)
+if os.path.exists("/usr/share/fonts"):
+    fm._load_fontmanager(try_read_cache=False)
+
 KOREAN_FONT = get_korean_font_path()
+
 REVIEW_COLS = ["리뷰","내용","리뷰내용","리뷰 내용","리뷰 본문","리뷰본문","후기","review","content","text","comment","body"]
 RATING_COLS = ["별점","평점","점수","rating","score","star","stars"]
 def find_col(df, candidates):
