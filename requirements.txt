@@ -4,4 +4,4 @@ openpyxl
 wordcloud
 matplotlib
 kiwipiepy
-google-genai
+google-generativeai

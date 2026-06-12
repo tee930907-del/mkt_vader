@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 from wordcloud import WordCloud
 from kiwipiepy import Kiwi
-from google import genai
+import google.generativeai as genai
 kiwi = Kiwi()
 STOPWORDS = {
     "것","수","등","더","위","때","중","곳","걸","뭐","좀","잘",
@@ -235,8 +235,9 @@ if uploaded:
                 prompt=build_prompt(pf.most_common(15),nf.most_common(15),sn,len(all_rv),len(pos_rv),len(neg_rv))
                 with st.spinner("🤖 Gemini AI 분석 중..."):
                     try:
-                        client=genai.Client(api_key=api_key)
-                        resp=client.models.generate_content(model="gemini-2.5-flash",contents=prompt)
+                        genai.configure(api_key=api_key)
+                        model=genai.GenerativeModel("gemini-2.5-flash")
+                        resp=model.generate_content(prompt)
                         st.markdown(resp.text)
                         st.download_button("📥 보고서 다운로드 (.md)",resp.text.encode("utf-8"),"marketing_insight.md","text/markdown",use_container_width=True,key="dl_rpt")
                     except Exception as e:
